@@ -1,6 +1,6 @@
 ---
 name: tapd-story
-description: TAPD 需求技能，用于读取、更新 TAPD 需求，以及通过 TestX design 接口读取需求。依赖 tapd-base 提供 OAuth 和用户态 API token；需要把需求关联到 TestX 时可继续使用 tapd-testx。
+description: TAPD 需求技能，用于读取、更新 TAPD 需求，以及通过 TestX design 接口读取需求；读取需求时只处理 API 返回的文本字段。依赖 tapd-base 提供 OAuth 和用户态 API token；需要把需求关联到 TestX 时可继续使用 tapd-testx。
 ---
 
 # TAPD Story 操作
@@ -54,6 +54,13 @@ python3 "$TAPD_SKILLS_ROOT/tapd-base/scripts/tapd_user_oauth_demo.py" authorize
 ```text
 项目关联的workspace不正确
 ```
+
+## 需求读取边界
+
+- 读取需求描述时，只使用 `story-get` 或 `design-story-get` 返回的文本字段，例如 `name`、`description`、`status`、`owner`、`developer`、`created`、`modified`。
+- `description` 可能是 HTML。可以基于其中的文字内容做摘要；遇到 `<img>`、附件、截图、相对图片路径或富文本媒体标签时，只说明“描述中包含图片/附件，未解析图片内容”。
+- 不要为了补全截图里的信息调用浏览器、chrome-devtools、图片下载、OCR、视觉模型或其它图像读取流程，除非用户在当前请求中明确要求解析图片。
+- 当用户只是要求“看下需求描述”时，输出文本内容和必要的元信息即可；不要主动打开 TAPD 页面或截图资源。
 
 ## 读取 TAPD 需求
 
