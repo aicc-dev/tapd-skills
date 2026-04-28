@@ -66,7 +66,7 @@ TAPD_CLIENT_SECRET=your_client_secret
 默认 scope 是：
 
 ```bash
-TAPD_SCOPES=user story#read story#write
+TAPD_SCOPES=user story#read story#write comment#read comment#write
 ```
 
 默认 token cache：

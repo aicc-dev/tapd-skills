@@ -5,13 +5,13 @@ TAPD 相关 Agent Skills 集合，用于沉淀 TAPD OAuth、用户态 API、TAPD
 ## Skills
 
 - `tapd-base`（目录 `skills/tapd-base`）：TAPD 用户态 OAuth、token 缓存、配置加载和通用用户态 API 调用。
-- `tapd-story`（目录 `skills/tapd-story`）：TAPD 需求读取、更新，以及通过 TestX design 接口读取需求。
+- `tapd-story`（目录 `skills/tapd-story`）：TAPD 需求读取、更新、需求评论读取/新增/修改，以及通过 TestX design 接口读取需求。
 - `tapd-testx`（目录 `skills/tapd-testx`）：TestX repo/folder/case 操作，以及需求关联 TestX 用例。
 
 ## 串联使用
 
 - 只做授权或通用 TAPD API：`tapd-base`
-- 操作需求：`tapd-base` -> `tapd-story`
+- 操作需求或需求评论：`tapd-base` -> `tapd-story`
 - 操作 TestX：`tapd-base` -> `tapd-testx`
 - 从需求生成或关联 TestX 用例：`tapd-base` -> `tapd-story` -> `tapd-testx`
 

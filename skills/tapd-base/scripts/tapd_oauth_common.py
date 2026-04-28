@@ -13,7 +13,7 @@ from urllib.parse import urlparse
 DEFAULT_AUTH_BASE_URL = "https://www.tapd.cn/oauth/"
 DEFAULT_API_BASE_URL = "https://api.tapd.cn"
 DEFAULT_REDIRECT_URI = "http://127.0.0.1:8765/callback"
-DEFAULT_SCOPES = "user story#read story#write"
+DEFAULT_SCOPES = "user story#read story#write comment#read comment#write"
 DEFAULT_STORY_FIELDS = "id,name,description,workspace_id,status,priority,iteration_id,owner,developer,created,modified"
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]

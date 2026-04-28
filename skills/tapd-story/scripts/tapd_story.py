@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
-"""Helpers for TAPD story read/update workflows."""
+"""Helpers for TAPD story and story comment workflows."""
 
 from __future__ import annotations
 
 import argparse
+import html
 import json
 import os
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -59,6 +61,20 @@ def load_object_payload(path: str, *, root_key: str | None = None) -> dict[str, 
     return payload
 
 
+def add_query_param(query: list[str], name: str, value: Any) -> None:
+    if value is None:
+        return
+    query.append(f"{name}={value}")
+
+
+def html_to_text(value: Any) -> str:
+    if value is None:
+        return ""
+    text = str(value)
+    text = re.sub(r"<[^>]+>", "", text)
+    return html.unescape(text)
+
+
 def story_get(args: argparse.Namespace) -> int:
     response = call_cached_api(
         path="/stories",
@@ -98,6 +114,91 @@ def design_story_get(args: argparse.Namespace) -> int:
     return 0
 
 
+def story_change_list(args: argparse.Namespace) -> int:
+    query: list[str] = []
+    add_query_param(query, "workspace_id", args.workspace_id)
+    add_query_param(query, "story_id", args.story_id)
+    add_query_param(query, "need_parse_changes", args.need_parse_changes)
+    add_query_param(query, "limit", args.limit)
+    add_query_param(query, "page", args.page)
+    add_query_param(query, "order", args.order)
+    add_query_param(query, "fields", args.fields)
+    response = call_cached_api(path="/story_changes", query=query)
+    print_json(response)
+    return 0
+
+
+def comment_list(args: argparse.Namespace) -> int:
+    query: list[str] = []
+    add_query_param(query, "workspace_id", args.workspace_id)
+    add_query_param(query, "id", args.comment_id)
+    add_query_param(query, "entry_type", args.entry_type if args.entry_id else None)
+    add_query_param(query, "entry_id", args.entry_id)
+    add_query_param(query, "description", args.description)
+    add_query_param(query, "limit", args.limit)
+    add_query_param(query, "page", args.page)
+    add_query_param(query, "order", args.order)
+    add_query_param(query, "fields", args.fields)
+    response = call_cached_api(path="/comments", query=query)
+    print_json(response)
+    return 0
+
+
+def comment_find(args: argparse.Namespace) -> int:
+    query: list[str] = []
+    add_query_param(query, "workspace_id", args.workspace_id)
+    add_query_param(query, "entry_type", args.entry_type if args.entry_id else None)
+    add_query_param(query, "entry_id", args.entry_id)
+    add_query_param(query, "limit", args.limit)
+    add_query_param(query, "page", args.page)
+    add_query_param(query, "order", args.order)
+    add_query_param(query, "fields", args.fields)
+    response = call_cached_api(path="/comments", query=query)
+    keyword = args.keyword
+    data = response.get("data", []) if isinstance(response, dict) else []
+    if isinstance(data, list):
+        response["data"] = [
+            item
+            for item in data
+            if keyword in str(item.get("Comment", {}).get("description", ""))
+            or keyword in html_to_text(item.get("Comment", {}).get("description", ""))
+        ]
+    print_json(response)
+    return 0
+
+
+def comment_add(args: argparse.Namespace) -> int:
+    if not args.entry_id:
+        raise ValueError("--story-id or --entry-id is required for comment-add")
+    body = {
+        "workspace_id": str(args.workspace_id),
+        "entry_type": str(args.entry_type),
+        "entry_id": str(args.entry_id),
+        "description": args.description,
+        "author": args.author,
+    }
+    if args.root_id:
+        body["root_id"] = str(args.root_id)
+    if args.reply_id:
+        body["reply_id"] = str(args.reply_id)
+    response = call_cached_api(path="/comments", method="POST", body=body)
+    print_json(response)
+    return 0
+
+
+def comment_update(args: argparse.Namespace) -> int:
+    body = {
+        "workspace_id": str(args.workspace_id),
+        "id": str(args.comment_id),
+        "description": args.description,
+    }
+    if args.change_creator:
+        body["change_creator"] = args.change_creator
+    response = call_cached_api(path="/comments", method="POST", body=body)
+    print_json(response)
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -121,6 +222,62 @@ def build_parser() -> argparse.ArgumentParser:
     design_story_parser.add_argument("--workspace-id", required=True)
     design_story_parser.add_argument("--story-id", required=True)
     design_story_parser.set_defaults(func=design_story_get)
+
+    story_change_parser = subparsers.add_parser("story-change-list", help="Read TAPD story change history")
+    story_change_parser.add_argument("--workspace-id", required=True)
+    story_change_parser.add_argument("--story-id", required=True)
+    story_change_parser.add_argument("--need-parse-changes", type=int, default=1)
+    story_change_parser.add_argument("--limit", type=int)
+    story_change_parser.add_argument("--page", type=int)
+    story_change_parser.add_argument("--order")
+    story_change_parser.add_argument("--fields")
+    story_change_parser.set_defaults(func=story_change_list)
+
+    comment_list_parser = subparsers.add_parser("comment-list", help="Read TAPD comments, defaulting to story comments")
+    comment_list_parser.add_argument("--workspace-id", required=True)
+    comment_list_parser.add_argument("--comment-id")
+    comment_list_parser.add_argument("--entry-type", default="stories")
+    comment_list_parser.add_argument("--entry-id")
+    comment_list_parser.add_argument("--story-id", dest="entry_id")
+    comment_list_parser.add_argument("--description")
+    comment_list_parser.add_argument("--limit", type=int)
+    comment_list_parser.add_argument("--page", type=int)
+    comment_list_parser.add_argument("--order")
+    comment_list_parser.add_argument("--fields")
+    comment_list_parser.set_defaults(func=comment_list)
+
+    comment_find_parser = subparsers.add_parser("comment-find", help="Find comments by plain-text keyword after reading comments")
+    comment_find_parser.add_argument("--workspace-id", required=True)
+    comment_find_parser.add_argument("--entry-type", default="stories")
+    comment_find_parser.add_argument("--entry-id")
+    comment_find_parser.add_argument("--story-id", dest="entry_id")
+    comment_find_parser.add_argument("--keyword", required=True)
+    comment_find_parser.add_argument("--limit", type=int, default=200)
+    comment_find_parser.add_argument("--page", type=int)
+    comment_find_parser.add_argument("--order", default="created desc")
+    comment_find_parser.add_argument(
+        "--fields",
+        default="id,description,author,entry_type,entry_id,created,workspace_id",
+    )
+    comment_find_parser.set_defaults(func=comment_find)
+
+    comment_add_parser = subparsers.add_parser("comment-add", help="Add a TAPD comment, defaulting to a story comment")
+    comment_add_parser.add_argument("--workspace-id", required=True)
+    comment_add_parser.add_argument("--entry-type", default="stories")
+    comment_add_parser.add_argument("--entry-id")
+    comment_add_parser.add_argument("--story-id", dest="entry_id")
+    comment_add_parser.add_argument("--description", required=True)
+    comment_add_parser.add_argument("--author", required=True)
+    comment_add_parser.add_argument("--root-id")
+    comment_add_parser.add_argument("--reply-id")
+    comment_add_parser.set_defaults(func=comment_add)
+
+    comment_update_parser = subparsers.add_parser("comment-update", help="Update a TAPD comment")
+    comment_update_parser.add_argument("--workspace-id", required=True)
+    comment_update_parser.add_argument("--comment-id", required=True)
+    comment_update_parser.add_argument("--description", required=True)
+    comment_update_parser.add_argument("--change-creator")
+    comment_update_parser.set_defaults(func=comment_update)
 
     return parser
 

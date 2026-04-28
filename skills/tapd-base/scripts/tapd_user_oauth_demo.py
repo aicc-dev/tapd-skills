@@ -29,7 +29,7 @@ from tapd_oauth_common import (
     validate_runtime_config,
 )
 
-DEFAULT_SCOPES = "user story#read story#write"
+DEFAULT_SCOPES = "user story#read story#write comment#read comment#write"
 DEFAULT_TIMEOUT_SECONDS = 300
 
 

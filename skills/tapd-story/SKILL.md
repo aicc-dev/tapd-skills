@@ -1,15 +1,15 @@
 ---
 name: tapd-story
-description: TAPD 需求技能，用于读取、更新 TAPD 需求，以及通过 TestX design 接口读取需求；读取需求时只处理 API 返回的文本字段。依赖 tapd-base 提供 OAuth 和用户态 API token；需要把需求关联到 TestX 时可继续使用 tapd-testx。
+description: TAPD 需求技能，用于读取、更新 TAPD 需求，读取/新增/修改需求评论，以及通过 TestX design 接口读取需求；读取需求时只处理 API 返回的文本字段。依赖 tapd-base 提供 OAuth 和用户态 API token；需要把需求关联到 TestX 时可继续使用 tapd-testx。
 ---
 
 # TAPD Story 操作
 
-使用这个 skill 处理 TAPD 需求读取、更新，以及 TestX design 侧的需求读取。执行前必须先确认相邻目录存在 `tapd-base`，并按 `tapd-base` 完成配置和 token 检查。
+使用这个 skill 处理 TAPD 需求读取、更新、需求评论读取/新增/修改，以及 TestX design 侧的需求读取。执行前必须先确认相邻目录存在 `tapd-base`，并按 `tapd-base` 完成配置和 token 检查。
 
 ## 串联方式
 
-- 需求读取/更新：`tapd-base` -> `tapd-story`
+- 需求读取/更新/评论：`tapd-base` -> `tapd-story`
 - 读取需求后创建或关联 TestX 用例：`tapd-base` -> `tapd-story` -> `tapd-testx`
 
 ## 前置检查
@@ -34,7 +34,7 @@ python3 "$TAPD_SKILLS_ROOT/tapd-base/scripts/tapd_user_oauth_demo.py" authorize
 
 ## 已验证规则
 
-- 默认 `TAPD_SCOPES=user story#read story#write` 覆盖需求读取和更新场景
+- 默认 `TAPD_SCOPES=user story#read story#write comment#read comment#write` 覆盖需求读取、更新和评论场景
 - TestX design 读取需求时，路径里两个 workspace 都必须填真实 `workspace_id`
 
 正确：
@@ -102,4 +102,68 @@ python3 "$TAPD_SKILLS_ROOT/tapd-story/scripts/tapd_story.py" \
   design-story-get \
   --workspace-id 32131908 \
   --story-id 1132131908001006860
+```
+
+## 读取 TAPD 需求评论
+
+按 TAPD 官方“获取评论”接口封装，使用 `GET /comments`。读取某条需求的评论时传 `--story-id`，脚本会默认使用 `entry_type=stories` 和 `entry_id=<story_id>`。也可以传 `--comment-id` 读取指定评论，或传 `--description`、`--limit`、`--page`、`--order`、`--fields` 控制查询、分页、排序和字段。
+
+注意：TAPD 的 `description` 参数不等同于稳定的“包含文本”搜索。需要按页面文本查找评论时，优先使用 `comment-find`，它会读取评论后在本地剥离 HTML 并做关键词包含匹配。
+
+```bash
+python3 "$TAPD_SKILLS_ROOT/tapd-story/scripts/tapd_story.py" \
+  comment-list \
+  --workspace-id 32131908 \
+  --story-id 1132131908001006860 \
+  --limit 50 \
+  --order "created desc"
+```
+
+## 按文本查找 TAPD 需求评论
+
+```bash
+python3 "$TAPD_SKILLS_ROOT/tapd-story/scripts/tapd_story.py" \
+  comment-find \
+  --workspace-id 32131908 \
+  --story-id 1132131908001006860 \
+  --keyword "hello from browser"
+```
+
+## 读取 TAPD 需求变更历史
+
+需求评论也会出现在 `story_changes` 的 `comment` 或 `field_changes` 字段中。需要对照页面动态时可以使用：
+
+```bash
+python3 "$TAPD_SKILLS_ROOT/tapd-story/scripts/tapd_story.py" \
+  story-change-list \
+  --workspace-id 32131908 \
+  --story-id 1132131908001006860 \
+  --limit 100 \
+  --order "created desc"
+```
+
+## 新增 TAPD 需求评论
+
+按 TAPD 官方“添加评论接口”封装，使用 `POST /comments`。需求评论默认 `entry_type=stories`，必填 `workspace_id`、`story_id`、`description` 和 `author`；回复评论时可选传 `--root-id` 或 `--reply-id`。
+
+```bash
+python3 "$TAPD_SKILLS_ROOT/tapd-story/scripts/tapd_story.py" \
+  comment-add \
+  --workspace-id 32131908 \
+  --story-id 1132131908001006860 \
+  --description "这个需求需要补充验收标准" \
+  --author tester
+```
+
+## 修改 TAPD 评论
+
+按 TAPD 官方“更新评论接口”封装，使用 `POST /comments`。必填 `workspace_id`、`comment_id` 和 `description`；需要记录变更人时可选传 `--change-creator`。
+
+```bash
+python3 "$TAPD_SKILLS_ROOT/tapd-story/scripts/tapd_story.py" \
+  comment-update \
+  --workspace-id 32131908 \
+  --comment-id 1020355782058781915 \
+  --description "更新后的评论内容" \
+  --change-creator tester
 ```
