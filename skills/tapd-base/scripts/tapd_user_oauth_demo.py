@@ -376,8 +376,9 @@ def check_config(_: argparse.Namespace) -> int:
     print(f"TAPD_TOKEN_CACHE: {config['token_cache']}")
     print("")
     print("Suggested flow:")
-    print("1. python3 tapd-base/scripts/tapd_user_oauth_demo.py authorize")
-    print("2. python3 tapd-base/scripts/tapd_user_api.py /users/info")
+    print('1. export TAPD_SKILLS_ROOT="${TAPD_SKILLS_ROOT:-$HOME/.codex/skills}"')
+    print('2. python3 "$TAPD_SKILLS_ROOT/tapd-base/scripts/tapd_user_oauth_demo.py" authorize')
+    print('3. python3 "$TAPD_SKILLS_ROOT/tapd-base/scripts/tapd_user_api.py" /users/info')
     return 0
 
 

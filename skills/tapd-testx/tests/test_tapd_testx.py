@@ -9,8 +9,10 @@ from unittest.mock import patch
 
 import sys
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
-sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "tapd-base" / "scripts"))
+ROOT = Path(__file__).resolve().parents[3]
+
+sys.path.insert(0, str(ROOT / "skills" / "tapd-testx" / "scripts"))
+sys.path.insert(0, str(ROOT / "skills" / "tapd-base" / "scripts"))
 
 import tapd_testx
 

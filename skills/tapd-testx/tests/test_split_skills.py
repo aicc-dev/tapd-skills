@@ -9,10 +9,11 @@ from pathlib import Path
 from unittest.mock import patch
 
 
-ROOT = Path(__file__).resolve().parents[2]
-BASE_SCRIPTS = ROOT / "tapd-base" / "scripts"
-STORY_SCRIPTS = ROOT / "tapd-story" / "scripts"
-TESTX_SCRIPTS = ROOT / "tapd-testx" / "scripts"
+ROOT = Path(__file__).resolve().parents[3]
+SKILLS_ROOT = ROOT / "skills"
+BASE_SCRIPTS = SKILLS_ROOT / "tapd-base" / "scripts"
+STORY_SCRIPTS = SKILLS_ROOT / "tapd-story" / "scripts"
+TESTX_SCRIPTS = SKILLS_ROOT / "tapd-testx" / "scripts"
 
 
 for path in (BASE_SCRIPTS, STORY_SCRIPTS, TESTX_SCRIPTS):
